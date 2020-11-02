@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AbstractSearcher.hpp"
+
 #include <queue>
 
 namespace searcher

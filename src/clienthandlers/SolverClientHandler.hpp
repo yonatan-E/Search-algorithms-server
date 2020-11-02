@@ -1,17 +1,16 @@
 #pragma once
 
 #include "AbstractClientHandler.hpp"
-#include "SolverFactory.hpp"
+#include "Solver.hpp"
+#include "Parser.hpp"
 #include "CacheManager.hpp"
 #include "SolverOperation.hpp"
 #include "StatusException.hpp"
 #include "HashUtil.hpp"
-#include "Graph.hpp"
-#include "SearchResult.hpp"
+
 #include <thread>
 #include <unistd.h>
 #include <chrono>
-#include <iostream>
 
 namespace server_side {
 
@@ -33,8 +32,12 @@ namespace server_side {
             // the length of an empty response
             static constexpr const char* s_EMPTY_RESPONSE = "";
 
+            // the solver factory, used to create the concrete solver
+            std::unique_ptr<parser::Parser<std::unique_ptr<solver::Solver<Problem, Solution>>>> m_commandParser;
+            // the input parser, used to parse the input problem
+            std::unique_ptr<parser::Parser<Problem>> m_inputParser;
             // the cache manager used to save previous solutions
-            mutable cache::CacheManager m_cache;
+            mutable cache::CacheManager m_cacheManager;
 
             public:
 
@@ -43,8 +46,13 @@ namespace server_side {
                  * 
                  * @param cache the given cache manager
                  */
-                SolverClientHandler(const cache::CacheManager& cache)
-                : m_cache(cache) {}
+                SolverClientHandler(
+                    std::unique_ptr<parser::Parser<std::unique_ptr<solver::Solver<Problem, Solution>>>> commandParser,
+                    std::unique_ptr<parser::Parser<Problem>> inputParser,
+                    const cache::CacheManager& cacheManager)
+                : m_commandParser(std::move(commandParser)),
+                m_inputParser(std::move(inputParser)),
+                m_cacheManager(cacheManager) {}
 
                 /**
                  * @brief Handle a specific client
@@ -61,7 +69,7 @@ namespace server_side {
 
                     try {
                         // waiting for the client message in a different thread
-                        std::thread readThread(readSockTrigger, *this,  clientSocket, std::ref(commandString), std::ref(finished));
+                        std::thread readThread(readSockTrigger, std::ref(*this), clientSocket, std::ref(commandString), std::ref(finished));
                         // counting the timeout
                         timeout(finished, timedout);
 
@@ -72,7 +80,7 @@ namespace server_side {
                         if(timedout){
                             try{
                                 closeSock(clientSocket);
-                            }catch(...){}
+                            } catch(...) {}
                                 return;
                         }
                     } catch (const status_exception::StatusException& e) {
@@ -110,7 +118,7 @@ namespace server_side {
 
                     try {
                         // waiting for the client message in a different thread
-                        std::thread readThread(readSockTrigger, *this,  clientSocket, std::ref(problemString), std::ref(finished));
+                        std::thread readThread(readSockTrigger, std::ref(*this),  clientSocket, std::ref(problemString), std::ref(finished));
                         // counting the timeout
                         timeout(finished, timedout);
 
@@ -121,7 +129,7 @@ namespace server_side {
                         if(timedout){
                             try{
                                 closeSock(clientSocket);
-                            }catch(...){}
+                            } catch (...){}
                                 return;
                         }
 
@@ -148,24 +156,22 @@ namespace server_side {
                     // getting the hashCode of the operation
                     const uint32_t hashCode = util::HashUtil::calculateHash(commandString + problemString);
                     // if the operation result also exists in the cache, so getting it from the cache
-                    if (m_cache.contains(hashCode)) {
+                    if (m_cacheManager.contains(hashCode)) {
                         try {
-                            solutionString = m_cache.getOperationFileContent(hashCode);
+                            solutionString = m_cacheManager.getOperationFileContent(hashCode);
                             // loading the operation into the cache
-                            m_cache.load(operation::SolverOperation(hashCode, solutionString));
+                            m_cacheManager.load(operation::SolverOperation(hashCode, solutionString));
                         } catch (...) {
                             status = 5;
                         }
 
                     } else {
-                        // getting the right solver according to the specific command, using a solver factory
-                        solver::SolverFactory<Problem, Solution> sFactory = solver::SolverFactory<Problem, Solution>();
-                    
                         try {
-                            const auto solver = sFactory.getSolver(commandString);
-                            solutionString = solver->solve(problemString);
+                            const auto solver = m_commandParser->parse(commandString);
+                            const auto problem = m_inputParser->parse(problemString);
+                            solutionString = solver->solve(problem).toString();
                             // loading the operation into the cache
-                            m_cache.load(operation::SolverOperation(hashCode, solutionString));
+                            m_cacheManager.load(operation::SolverOperation(hashCode, solutionString));
                         } catch(const status_exception::StatusException& e){
                             status = e.getStatus();
                         } catch (...) {
@@ -208,7 +214,7 @@ namespace server_side {
                  * @param message a variable that will be initialized with the message sent to the socket
                  * @param finished this variable will be initialized with true if the reading from the socket is completed
                  */
-                static void readSockTrigger(const SolverClientHandler<searcher::Graph, searcher::SearchResult>& ch, const uint32_t clientSocket, std::string& message, bool& finished){
+                static void readSockTrigger(const SolverClientHandler<Problem, Solution>& ch, const uint32_t clientSocket, std::string& message, bool& finished){
                     message = ch.readSock(clientSocket);
                     finished = true;
                 }

@@ -4,6 +4,7 @@
 #include "Searcher.hpp"
 #include "SearchResult.hpp"
 #include "Graph.hpp"
+
 #include <cstdint>
 #include <utility>
 #include <memory>
@@ -32,9 +33,9 @@ namespace solver
         /**
              * @brief Solve a problem and get its solution
              * 
-             * @param problemString a string represents the given problem
-             * @return std::string a string represents the solution of the given problem
+             * @param problem the object represents the problem
+             * @return Solution an object represents the solution of the problem
              */
-        std::string solve(const std::string &problemString) const override;
+        searcher::SearchResult solve(const searcher::Graph &problem) const override;
     };
 }

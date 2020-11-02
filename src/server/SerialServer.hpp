@@ -1,10 +1,13 @@
 #pragma once
 
 #include "Server.hpp"
-#include "ClientHandler.hpp"
 
 namespace server_side
 {
+    /**
+     * @brief This class represents a serial server.
+     * 
+     */
     class SerialServer : public Server
     {
 

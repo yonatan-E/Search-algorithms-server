@@ -1,11 +1,14 @@
 #pragma once
 
-#include "ClientHandler.hpp"
 #include "SolverClientHandler.hpp"
 
 namespace server_side
 {
 
+    /**
+     * @brief This class represents a server.
+     * 
+     */
     class Server
     {
 

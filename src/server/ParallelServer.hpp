@@ -1,14 +1,18 @@
 #pragma once
 
 #include "Server.hpp"
-#include "ClientHandler.hpp"
+
 #include <queue>
 #include <vector>
 #include <thread>
 #include <mutex>
 
 namespace server_side
-{
+{   
+    /**
+     * @brief This class represents a parallel server.
+     * 
+     */
     class ParallelServer : public Server
     {
 

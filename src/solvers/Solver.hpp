@@ -19,10 +19,10 @@ namespace solver
         /**
              * @brief Solve a problem and get its solution
              * 
-             * @param problemString a string represents the given problem
-             * @return std::string a string represents the solution of the given problem
+             * @param problem the object represents the problem
+             * @return Solution an object represents the solution of the problem
              */
-        virtual std::string solve(const std::string &problemString) const = 0;
+        virtual Solution solve(const Problem &problem) const = 0;
 
         /**
          * @brief Virtual destructor

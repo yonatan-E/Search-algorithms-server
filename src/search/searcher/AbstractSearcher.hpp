@@ -3,6 +3,7 @@
 #include "Searcher.hpp"
 #include "SearchResult.hpp"
 #include "SearchExceptions.hpp"
+
 #include <set>
 #include <map>
 
